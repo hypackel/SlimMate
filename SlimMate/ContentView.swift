@@ -14,8 +14,8 @@ class VolumeMonitor: ObservableObject {
 
     private var interpolationTimer: Timer? // Timer for manual interpolation
     private var targetVolume: Float = 0.0 // The volume we are animating towards
-    private let interpolationDuration: TimeInterval = 0.15 // Duration for the interpolation animation
-    private let interpolationSteps = 15 // Number of steps in the interpolation
+    private let interpolationDuration: TimeInterval = 0.1 // Slightly reduced duration for quicker response
+    private let interpolationSteps = 10 // Slightly reduced steps
 
     init() {
         setupVolumeObservation()
@@ -57,7 +57,7 @@ class VolumeMonitor: ObservableObject {
             // Get the updated volume
             let status = AudioObjectGetPropertyData(
                 self.audioDeviceID,
-                &volumeAddr,
+                &volumeAddr, // Use the mutable copy
                 0,
                 nil,
                 &dataSize,
@@ -112,34 +112,44 @@ class VolumeMonitor: ObservableObject {
     
     // Custom handler for volume updates to perform interpolation
     private func handleVolumeUpdate(newVolume: Float) {
-        // If the new volume is lower than the current displayed volume, interpolate
-        if newVolume < self.volumeLevel {
+        // Always invalidate the existing timer on a new update
+        self.interpolationTimer?.invalidate()
+        self.interpolationTimer = nil
+        
+        // Only start interpolation if the change is significant
+        if abs(newVolume - self.volumeLevel) > 0.001 {
             self.targetVolume = newVolume
             
-            // Invalidate existing timer if any
-            self.interpolationTimer?.invalidate()
-            
             let timeInterval = interpolationDuration / Double(interpolationSteps)
-            let volumeStep = (self.volumeLevel - newVolume) / Float(interpolationSteps)
+            let volumeDifference = newVolume - self.volumeLevel
+            let volumeStep = volumeDifference / Float(interpolationSteps)
             
+            // If the difference is very small, just set the value directly to avoid unnecessary timer
+            if abs(volumeDifference) < volumeStep { // Compare absolute difference to step size
+                 self.volumeLevel = newVolume
+                 return
+            }
+
             self.interpolationTimer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: true) { [weak self] timer in
                 guard let self = self else { return }
                 
-                // Decrease volume level by a step
-                self.volumeLevel -= volumeStep
+                // Move volume level towards the target volume
+                let nextVolume = self.volumeLevel + volumeStep
                 
-                // If we have reached or gone below the target volume, stop the timer and set the exact target volume
-                if self.volumeLevel <= self.targetVolume {
-                    self.volumeLevel = self.targetVolume
+                // Check if we have reached or passed the target volume using the sign of the step
+                if (volumeStep > 0 && nextVolume >= self.targetVolume) || (volumeStep < 0 && nextVolume <= self.targetVolume) {
+                    self.volumeLevel = self.targetVolume // Ensure we land exactly on the target
                     timer.invalidate()
                     self.interpolationTimer = nil
+                } else {
+                     self.volumeLevel = nextVolume
                 }
             }
         } else {
-            // If volume is increasing or same, just set the new volume directly
-            // Invalidate timer if it was running for a previous decrease
+             // If change is insignificant or no change, just ensure the timer is stopped
             self.interpolationTimer?.invalidate()
             self.interpolationTimer = nil
+            // Also, ensure the volume level is exactly the target if very close
             self.volumeLevel = newVolume
         }
     }
