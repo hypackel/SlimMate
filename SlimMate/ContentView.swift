@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreAudio // Import CoreAudio framework
 import Foundation // Import Foundation for Timer
+import AppKit // Import AppKit
 
 class VolumeMonitor: ObservableObject {
     @Published var volumeLevel: Float = 0.0
@@ -14,8 +15,12 @@ class VolumeMonitor: ObservableObject {
 
     private var interpolationTimer: Timer? // Timer for manual interpolation
     private var targetVolume: Float = 0.0 // The volume we are animating towards
-    private let interpolationDuration: TimeInterval = 0.1 // Slightly reduced duration for quicker response
-    private let interpolationSteps = 10 // Slightly reduced steps
+    internal let interpolationDuration: TimeInterval = 0.08 // Duration for volume decrease interpolation
+    private let interpolationSteps = 8 // Steps for volume decrease interpolation
+    
+    // Parameters for volume increase interpolation
+    private let increaseInterpolationDuration: TimeInterval = 0.03 // Shorter duration for increase
+    private let increaseInterpolationSteps = 3 // Fewer steps for quicker increase
 
     init() {
         setupVolumeObservation()
@@ -115,29 +120,45 @@ class VolumeMonitor: ObservableObject {
         // Always invalidate the existing timer on a new update
         self.interpolationTimer?.invalidate()
         self.interpolationTimer = nil
-        
+
         // Only start interpolation if the change is significant
         if abs(newVolume - self.volumeLevel) > 0.001 {
             self.targetVolume = newVolume
             
-            let timeInterval = interpolationDuration / Double(interpolationSteps)
+            let timeInterval: TimeInterval
             let volumeDifference = newVolume - self.volumeLevel
-            let volumeStep = volumeDifference / Float(interpolationSteps)
+            let volumeStep: Float
+            let totalSteps: Int
+
+            if newVolume > self.volumeLevel {
+                // Volume is increasing, use faster interpolation parameters
+                timeInterval = increaseInterpolationDuration / Double(increaseInterpolationSteps)
+                volumeStep = volumeDifference / Float(increaseInterpolationSteps)
+                totalSteps = increaseInterpolationSteps
+            } else {
+                // Volume is decreasing, use regular interpolation parameters
+                timeInterval = interpolationDuration / Double(interpolationSteps)
+                volumeStep = volumeDifference / Float(interpolationSteps)
+                totalSteps = interpolationSteps
+            }
             
             // If the difference is very small, just set the value directly to avoid unnecessary timer
-            if abs(volumeDifference) < volumeStep { // Compare absolute difference to step size
-                 self.volumeLevel = newVolume
-                 return
+            if abs(volumeDifference) < abs(volumeStep) { // Compare absolute difference to absolute step size
+                self.volumeLevel = newVolume
+                return
             }
+            
+            // Ensure volumeStep has the correct sign for the direction of change
+            let effectiveVolumeStep = (newVolume > self.volumeLevel) ? abs(volumeStep) : -abs(volumeStep)
 
             self.interpolationTimer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: true) { [weak self] timer in
                 guard let self = self else { return }
-                
-                // Move volume level towards the target volume
-                let nextVolume = self.volumeLevel + volumeStep
-                
-                // Check if we have reached or passed the target volume using the sign of the step
-                if (volumeStep > 0 && nextVolume >= self.targetVolume) || (volumeStep < 0 && nextVolume <= self.targetVolume) {
+
+                // Move volume level towards the target volume using the effective step
+                let nextVolume = self.volumeLevel + effectiveVolumeStep
+
+                // Check if we have reached or passed the target volume
+                if (newVolume > self.volumeLevel && nextVolume >= self.targetVolume) || (newVolume <= self.volumeLevel && nextVolume <= self.targetVolume) {
                     self.volumeLevel = self.targetVolume // Ensure we land exactly on the target
                     timer.invalidate()
                     self.interpolationTimer = nil
@@ -146,10 +167,9 @@ class VolumeMonitor: ObservableObject {
                 }
             }
         } else {
-             // If change is insignificant or no change, just ensure the timer is stopped
+             // If change is insignificant or no change, just ensure the timer is stopped and level is set
             self.interpolationTimer?.invalidate()
             self.interpolationTimer = nil
-            // Also, ensure the volume level is exactly the target if very close
             self.volumeLevel = newVolume
         }
     }
@@ -170,15 +190,80 @@ class VolumeMonitor: ObservableObject {
     }
 }
 
+// Helper to get the NSWindow
+struct WindowAccessor: NSViewRepresentable {
+    var onChange: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { [weak view] in
+            self.onChange(view?.window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+// Controller to manage the NSWindow
+class WindowController: ObservableObject {
+    weak var window: NSWindow? {
+        didSet {
+            if let window = window {
+                // Configure the window
+                window.level = .floating // Make the window appear above normal windows
+                window.collectionBehavior = [.canJoinAllSpaces, .managed] // Keep it on all spaces and hide from Mission Control/Dock
+                window.styleMask = .borderless // Remove window borders and traffic lights
+                // We'll center it later when it becomes visible
+                window.isOpaque = false // Make it transparent
+                window.backgroundColor = .clear // Clear background
+            }
+        }
+    }
+    
+    func showWindow() {
+        window?.orderFront(nil)
+         centerWindow()
+    }
+    
+    func hideWindow() {
+        window?.orderOut(nil)
+    }
+    
+    private func centerWindow() {
+        if let window = window {
+            let screenFrame = NSScreen.main?.frame ?? .zero
+            let windowSize = window.frame.size
+            let x = screenFrame.midX - windowSize.width / 2
+            let y = screenFrame.midY - windowSize.height / 2
+            window.setFrameOrigin(CGPoint(x: x, y: y))
+        }
+    }
+    
+    // Method to toggle visibility (can be used by the ContentView logic)
+    func setVisibility(_ isVisible: Bool) {
+        if isVisible {
+            showWindow()
+        } else {
+            hideWindow()
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var volumeMonitor = VolumeMonitor()
-    @State private var isVisible = false
+    // Use StateObject for the controller within this View's lifecycle
+    @StateObject private var windowController = WindowController()
+    
+    // State to control the visibility of the HUD content
+    @State private var isHUDVisible = false
     private let hideDelay: Double = 2.0 // Seconds to keep visible after volume change
     @State private var hideTask: DispatchWorkItem? = nil // To keep track of the hide task
 
     var body: some View {
+        // Apply the WindowAccessor to get the window reference
         ZStack {
-            if isVisible {
+            if isHUDVisible {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.black.opacity(0.7))
                     .frame(width: 250, height: 80) // Made wider
@@ -191,28 +276,61 @@ struct ContentView: View {
                     ProgressView(value: volumeMonitor.volumeLevel)
                         .progressViewStyle(LinearProgressViewStyle(tint: .white))
                         .frame(width: 140)
-                        .animation(.easeInOut(duration: 0.2), value: volumeMonitor.volumeLevel)
                 }
                 .frame(width: 160)
                 .transition(.opacity) // Add transition to the HStack as well
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: isVisible)
+        .background(
+             // Use WindowAccessor to get the NSWindow and pass it to the controller
+            WindowAccessor {
+                self.windowController.window = $0
+                // Initially hide the window
+                self.windowController.hideWindow()
+            }
+        )
+        .animation(.easeInOut(duration: 0.3), value: isHUDVisible)
+        // Use the isHUDVisible state to control the window visibility via the controller
+        // Explicitly animate volume decrease
         .onChange(of: volumeMonitor.volumeLevel) { oldVolume, newVolume in
             // Only trigger visibility change if volume actually changes to avoid showing on initial load
             if abs(newVolume - oldVolume) > 0.001 { 
-                isVisible = true
+                isHUDVisible = true // Update the state to show the HUD
                 
                 // Cancel the previous hide task if it exists
                 hideTask?.cancel()
                 
                 // Schedule a new hide task
                 let task = DispatchWorkItem { 
-                    isVisible = false
+                    isHUDVisible = false // Update the state to hide the HUD
                 }
                 hideTask = task
                 DispatchQueue.main.asyncAfter(deadline: .now() + hideDelay, execute: task)
+                
+                // Conditionally apply animation for volume decrease
+                if newVolume < oldVolume {
+                    withAnimation(.easeInOut(duration: volumeMonitor.interpolationDuration)) {
+                         // This block is needed to implicitly animate the change to volumeMonitor.volumeLevel
+                         // which is already handled by the VolumeMonitor's interpolation timer.
+                         // However, keeping it here makes the intent clear, although the actual animation
+                         // smoothing comes from the Timer-based interpolation in VolumeMonitor.
+                         // There isn't a direct way in SwiftUI onChange to observe and animate a value
+                         // whose updates are driven by a separate Timer. The VolumeMonitor's role
+                         // is to update volumeLevel over time during decrease. The SwiftUI view
+                         // observes the final or intermediate values of volumeLevel and updates.
+                         // Removing the .animation modifier means SwiftUI will update the ProgressView
+                         // instantly *unless* the state change is already animated (like from the Timer).
+                         // So, the VolumeMonitor's Timer updates will appear animated, while direct
+                         // updates (volume up) will be instant.
+                    }
+                }
+                 // For volume increase (newVolume >= oldVolume), volumeLevel is updated instantly
+                 // in handleVolumeUpdate, and SwiftUI will reflect this instantly without the .animation modifier.
             }
+        }
+        // Observe the isHUDVisible state and tell the controller to show/hide the window
+        .onChange(of: isHUDVisible) { _, newValue in
+            windowController.setVisibility(newValue)
         }
     }
 }

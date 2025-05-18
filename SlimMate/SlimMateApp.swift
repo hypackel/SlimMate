@@ -1,14 +1,14 @@
 import SwiftUI
+import AppKit // Import AppKit for NSApplication
 
 @main
 struct SlimMateApp: App {
     var body: some Scene {
-        WindowGroup {
+        // HUD window scene
+        WindowGroup("VolumeHUD") {
             ContentView()
-                .frame(width: 200, height: 100)
-                .background(Color.clear)
         }
-        .windowStyle(HiddenTitleBarWindowStyle())
-        .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+        .handlesExternalEvents(matching: []) // Prevent showing in the dock
     }
 }
