@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreAudio // Import CoreAudio framework
+import Foundation // Import Foundation for Timer
 
 class VolumeMonitor: ObservableObject {
     @Published var volumeLevel: Float = 0.0
@@ -10,6 +11,11 @@ class VolumeMonitor: ObservableObject {
         mElement: kAudioObjectPropertyElementMaster
     )
     private var volumeChangeListener: AudioObjectPropertyListenerBlock?
+
+    private var interpolationTimer: Timer? // Timer for manual interpolation
+    private var targetVolume: Float = 0.0 // The volume we are animating towards
+    private let interpolationDuration: TimeInterval = 0.15 // Duration for the interpolation animation
+    private let interpolationSteps = 15 // Number of steps in the interpolation
 
     init() {
         setupVolumeObservation()
@@ -59,23 +65,24 @@ class VolumeMonitor: ObservableObject {
             )
 
             if status == noErr {
+                // Dispatch to main queue to handle volume update
                 DispatchQueue.main.async {
-                    self.volumeLevel = volume
+                    self.handleVolumeUpdate(newVolume: volume)
                 }
             } else {
-                print("Error getting volume property data: \(status)")
+                print("Error getting volume property data in listener: \(status)")
             }
         }
-        self.volumeChangeListener = listenerBlock as AudioObjectPropertyListenerBlock
+        // Assign the block to the retained property
+        self.volumeChangeListener = listenerBlock
 
         // Add the listener
-        if let listener = volumeChangeListener {
-            var volumeAddr = self.volumePropertyAddress // Create a mutable copy
+        if var volumeAddr = Optional(self.volumePropertyAddress) { // Use a mutable variable for the address
             let addListenerStatus = AudioObjectAddPropertyListenerBlock(
                 self.audioDeviceID,
-                &volumeAddr,
-                nil, // Use a default dispatch queue
-                listener
+                &volumeAddr, // Pass the address by reference
+                nil, // Use a default dispatch queue for the listener callbacks
+                listenerBlock // Pass the listener block
             )
 
             if addListenerStatus != noErr {
@@ -97,9 +104,43 @@ class VolumeMonitor: ObservableObject {
         )
         
         if initialStatus == noErr {
-            self.volumeLevel = initialVolume
+            self.handleVolumeUpdate(newVolume: initialVolume)
         } else {
              print("Error getting initial volume: \(initialStatus)")
+        }
+    }
+    
+    // Custom handler for volume updates to perform interpolation
+    private func handleVolumeUpdate(newVolume: Float) {
+        // If the new volume is lower than the current displayed volume, interpolate
+        if newVolume < self.volumeLevel {
+            self.targetVolume = newVolume
+            
+            // Invalidate existing timer if any
+            self.interpolationTimer?.invalidate()
+            
+            let timeInterval = interpolationDuration / Double(interpolationSteps)
+            let volumeStep = (self.volumeLevel - newVolume) / Float(interpolationSteps)
+            
+            self.interpolationTimer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: true) { [weak self] timer in
+                guard let self = self else { return }
+                
+                // Decrease volume level by a step
+                self.volumeLevel -= volumeStep
+                
+                // If we have reached or gone below the target volume, stop the timer and set the exact target volume
+                if self.volumeLevel <= self.targetVolume {
+                    self.volumeLevel = self.targetVolume
+                    timer.invalidate()
+                    self.interpolationTimer = nil
+                }
+            }
+        } else {
+            // If volume is increasing or same, just set the new volume directly
+            // Invalidate timer if it was running for a previous decrease
+            self.interpolationTimer?.invalidate()
+            self.interpolationTimer = nil
+            self.volumeLevel = newVolume
         }
     }
 
@@ -110,34 +151,58 @@ class VolumeMonitor: ObservableObject {
              AudioObjectRemovePropertyListenerBlock(
                 self.audioDeviceID,
                 &volumeAddr,
-                nil, // Use the same dispatch queue as when adding
+                nil, // Use the same dispatch queue as when adding (nil defaults to main)
                 listener
             )
         }
+        // Invalidate the timer on deinit
+        interpolationTimer?.invalidate()
     }
 }
 
 struct ContentView: View {
     @StateObject private var volumeMonitor = VolumeMonitor()
+    @State private var isVisible = false
+    private let hideDelay: Double = 2.0 // Seconds to keep visible after volume change
+    @State private var hideTask: DispatchWorkItem? = nil // To keep track of the hide task
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.black.opacity(0.7))
-                .frame(width: 180, height: 80)
-            
-            VStack {
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
-                ProgressView(value: volumeMonitor.volumeLevel)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .white))
-                    .frame(width: 140)
+            if isVisible {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.black.opacity(0.7))
+                    .frame(width: 250, height: 80) // Made wider
+                    .transition(.opacity)
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                    ProgressView(value: volumeMonitor.volumeLevel)
+                        .progressViewStyle(LinearProgressViewStyle(tint: .white))
+                        .frame(width: 140)
+                        .animation(.easeInOut(duration: 0.2), value: volumeMonitor.volumeLevel)
+                }
+                .frame(width: 160)
+                .transition(.opacity) // Add transition to the HStack as well
             }
         }
-        .onAppear {
-            // Simulate volume change animation (replace later with real hook)
-            // Removed simulated animation as volume is now controlled by system
+        .animation(.easeInOut(duration: 0.3), value: isVisible)
+        .onChange(of: volumeMonitor.volumeLevel) { oldVolume, newVolume in
+            // Only trigger visibility change if volume actually changes to avoid showing on initial load
+            if abs(newVolume - oldVolume) > 0.001 { 
+                isVisible = true
+                
+                // Cancel the previous hide task if it exists
+                hideTask?.cancel()
+                
+                // Schedule a new hide task
+                let task = DispatchWorkItem { 
+                    isVisible = false
+                }
+                hideTask = task
+                DispatchQueue.main.asyncAfter(deadline: .now() + hideDelay, execute: task)
+            }
         }
     }
 }
