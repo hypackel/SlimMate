@@ -231,8 +231,10 @@ class WindowController: ObservableObject {
         if let window = window {
             let screenFrame = NSScreen.main?.frame ?? .zero
             let windowSize = window.frame.size
+            // Calculate position to place the window at the bottom, slightly above the dock
+            let padding: CGFloat = 30 // Adjust padding from the bottom as needed
             let x = screenFrame.midX - windowSize.width / 2
-            let y = screenFrame.midY - windowSize.height / 2
+            let y = screenFrame.minY + padding
             window.setFrameOrigin(CGPoint(x: x, y: y))
         }
     }
@@ -274,7 +276,7 @@ struct ContentView: View {
                     .transition(.opacity)
                 
                 HStack(spacing: 8) {
-                    Image(systemName: "speaker.wave.2.fill")
+                    Image(systemName: volumeMonitor.volumeLevel == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.white)
                     ProgressView(value: volumeMonitor.volumeLevel)
