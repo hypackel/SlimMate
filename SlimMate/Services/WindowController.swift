@@ -36,10 +36,12 @@ class WindowController: ObservableObject {
         if let window = window {
             let screenFrame = NSScreen.main?.frame ?? .zero
             let windowSize = window.frame.size
-            // Calculate position to place the window at the bottom, slightly above the dock
-            let padding: CGFloat = 30 // Adjust padding from the bottom as needed
-            let x = screenFrame.midX - windowSize.width / 2
-            let y = screenFrame.minY + padding
+            // Calculate position to place the window centered horizontally and higher above the dock
+            let bottomPadding: CGFloat = 80 // Increased padding from the bottom
+            // Adjust horizontal position with an offset
+            let horizontalAdjustment: CGFloat = 150 // Subtract this to move left, add to move right
+            let x = screenFrame.midX - windowSize.width / 2 - horizontalAdjustment // Apply the adjustment
+            let y = screenFrame.minY + bottomPadding
             window.setFrameOrigin(CGPoint(x: x, y: y))
         }
     }
