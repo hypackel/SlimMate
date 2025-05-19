@@ -9,6 +9,28 @@ import CoreAudio // Import CoreAudio framework
 import Foundation // Import Foundation for Timer
 import AppKit // Import AppKit
 
+// Struct to wrap NSVisualEffectView for AppKit-based visual effects
+struct VisualEffectView: NSViewRepresentable {
+    @Environment(\.colorScheme) var colorScheme // Access SwiftUI environment color scheme
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .sidebar // Use a dark, translucent material
+        view.state = .active // Apply the effect actively
+        // The appearance will be set in updateNSView
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        // Explicitly set the appearance based on the SwiftUI environment
+        if colorScheme == .dark {
+            nsView.appearance = NSAppearance(named: .vibrantDark) // Use dark vibrant appearance
+        } else {
+            nsView.appearance = NSAppearance(named: .vibrantLight) // Use light vibrant appearance
+        }
+    }
+}
+
 // Keep the WindowController class but remove the StateObject in ContentView
 // class WindowController: ObservableObject {
 // ... existing code ...
@@ -29,23 +51,24 @@ struct ContentView: View {
         // The ZStack contains the HUD content
         ZStack {
             if isHUDVisible {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(colorScheme == .dark ? Color.black.opacity(0.6) : Color.clear) // Conditional fill color
-                    .background(.thinMaterial) // Apply material as background
-                    .frame(width: 220, height: 50) // Reduced height
-                    .transition(.opacity)
-                
-                HStack(spacing: 8) {
-                    Image(systemName: volumeMonitor.volumeLevel == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.primary)
-                    ProgressView(value: volumeMonitor.volumeLevel)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .primary))
-                        .frame(width: 140)
+                ZStack { // Use ZStack to layer background and content
+                    RoundedRectangle(cornerRadius: 20)
+                        .background(VisualEffectView()) // Use NSVisualEffectView for background
+                        .frame(width: 220, height: 50) // Apply frame to the background shape
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: volumeMonitor.volumeLevel == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.primary)
+                        ProgressView(value: volumeMonitor.volumeLevel)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .primary))
+                            .frame(width: 140)
+                    }
+                    .foregroundStyle(.primary) // Apply foreground style to the HStack
+                    .frame(width: 160)
                 }
-                .foregroundStyle(.primary) // Apply foreground style to the HStack
-                .frame(width: 160)
-                .transition(.opacity) // Add transition to the HStack as well
+                .transition(.opacity) // Apply transition to the ZStack
+                .foregroundStyle(.primary) // Explicitly set foreground style for the ZStack content
             }
         }
         // Remove the WindowAccessor background modifier
