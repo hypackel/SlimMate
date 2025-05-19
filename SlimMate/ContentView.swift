@@ -18,6 +18,7 @@ struct ContentView: View {
     // VolumeMonitor and WindowController are now provided via the environment
     @EnvironmentObject private var volumeMonitor: VolumeMonitor
     @EnvironmentObject private var windowController: WindowController
+    @Environment(\.colorScheme) var colorScheme // Add environment variable to detect color scheme
     
     // State to control the visibility of the HUD content
     @State private var isHUDVisible = false
@@ -29,18 +30,20 @@ struct ContentView: View {
         ZStack {
             if isHUDVisible {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.black.opacity(0.7))
-                    .frame(width: 250, height: 80) // Made wider
+                    .fill(colorScheme == .dark ? Color.black.opacity(0.6) : Color.clear) // Conditional fill color
+                    .background(.thinMaterial) // Apply material as background
+                    .frame(width: 220, height: 50) // Reduced height
                     .transition(.opacity)
                 
                 HStack(spacing: 8) {
                     Image(systemName: volumeMonitor.volumeLevel == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     ProgressView(value: volumeMonitor.volumeLevel)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .white))
+                        .progressViewStyle(LinearProgressViewStyle(tint: .primary))
                         .frame(width: 140)
                 }
+                .foregroundStyle(.primary) // Apply foreground style to the HStack
                 .frame(width: 160)
                 .transition(.opacity) // Add transition to the HStack as well
             }
