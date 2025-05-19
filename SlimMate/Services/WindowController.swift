@@ -33,15 +33,21 @@ class WindowController: ObservableObject {
     }
     
     private func centerWindow() {
-        if let window = window {
-            let screenFrame = NSScreen.main?.frame ?? .zero
+        if let window = window, let screen = NSScreen.main {
+            let screenFrame = screen.frame
+            let visibleFrame = screen.visibleFrame
             let windowSize = window.frame.size
-            // Calculate position to place the window centered horizontally and higher above the dock
-            let bottomPadding: CGFloat = 80 // Increased padding from the bottom
-            // Adjust horizontal position with an offset
-            let horizontalAdjustment: CGFloat = 150 // Subtract this to move left, add to move right
-            let x = screenFrame.midX - windowSize.width / 2 - horizontalAdjustment // Apply the adjustment
-            let y = screenFrame.minY + bottomPadding
+            
+            // Horizontal positioning: centered on the screen with a visual adjustment
+            // Standard centering: screenFrame.midX - windowSize.width / 2
+            // Add a negative adjustment to shift left, positive to shift right
+            let horizontalVisualAdjustment: CGFloat = -120 // Adjust this value for fine-tuning
+            let x = screenFrame.midX - windowSize.width / 2 + horizontalVisualAdjustment
+            
+            // Vertical positioning: above the dock using visibleFrame.minY and the window's height
+            let verticalOffsetAboveDock: CGFloat = windowSize.height + 10 // Dock height + height of the horizontal bar + small padding
+            let y = visibleFrame.minY + verticalOffsetAboveDock
+            
             window.setFrameOrigin(CGPoint(x: x, y: y))
         }
     }
