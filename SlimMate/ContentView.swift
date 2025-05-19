@@ -1,3 +1,9 @@
+//
+//  ContentView.swift
+//  SlimMate
+//
+//
+
 import SwiftUI
 import CoreAudio // Import CoreAudio framework
 import Foundation // Import Foundation for Timer
@@ -190,22 +196,7 @@ class VolumeMonitor: ObservableObject {
     }
 }
 
-// Helper to get the NSWindow
-struct WindowAccessor: NSViewRepresentable {
-    var onChange: (NSWindow?) -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { [weak view] in
-            self.onChange(view?.window)
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {}
-}
-
-// Controller to manage the NSWindow
+// Keep the WindowController class but remove the StateObject in ContentView
 class WindowController: ObservableObject {
     weak var window: NSWindow? {
         didSet {
@@ -217,13 +208,19 @@ class WindowController: ObservableObject {
                 // We'll center it later when it becomes visible
                 window.isOpaque = false // Make it transparent
                 window.backgroundColor = .clear // Clear background
+                
+                // Ensure the window's content view is set if it wasn't already
+                // This might be redundant if NSHostingController sets it, but as a safeguard:
+                // if window.contentViewController == nil {
+                //     // This case is unlikely with current setup, but included for completeness
+                // }
             }
         }
     }
     
     func showWindow() {
         window?.orderFront(nil)
-         centerWindow()
+        centerWindow()
     }
     
     func hideWindow() {
@@ -248,12 +245,19 @@ class WindowController: ObservableObject {
             hideWindow()
         }
     }
+    
+    // This method might not be needed anymore if initial hiding is handled in AppDelegate
+    // func enforceInitialVisibility(isVisible: Bool) {
+    //     if !isVisible {
+    //         hideWindow()
+    //     }
+    // }
 }
 
 struct ContentView: View {
-    @StateObject private var volumeMonitor = VolumeMonitor()
-    // Use StateObject for the controller within this View's lifecycle
-    @StateObject private var windowController = WindowController()
+    // VolumeMonitor and WindowController are now provided via the environment
+    @EnvironmentObject private var volumeMonitor: VolumeMonitor
+    @EnvironmentObject private var windowController: WindowController
     
     // State to control the visibility of the HUD content
     @State private var isHUDVisible = false
@@ -261,7 +265,7 @@ struct ContentView: View {
     @State private var hideTask: DispatchWorkItem? = nil // To keep track of the hide task
 
     var body: some View {
-        // Apply the WindowAccessor to get the window reference
+        // The ZStack contains the HUD content
         ZStack {
             if isHUDVisible {
                 RoundedRectangle(cornerRadius: 20)
@@ -281,14 +285,15 @@ struct ContentView: View {
                 .transition(.opacity) // Add transition to the HStack as well
             }
         }
-        .background(
-             // Use WindowAccessor to get the NSWindow and pass it to the controller
-            WindowAccessor {
-                self.windowController.window = $0
-                // Initially hide the window
-                self.windowController.hideWindow()
-            }
-        )
+        // Remove the WindowAccessor background modifier
+        // .background(
+        //      // Use WindowAccessor to get the NSWindow and pass it to the controller
+        //     WindowAccessor {
+        //         self.windowController.window = $0
+        //         // Initially hide the window
+        //         self.windowController.hideWindow()
+        //     }
+        // )
         .animation(.easeInOut(duration: 0.3), value: isHUDVisible)
         // Use the isHUDVisible state to control the window visibility via the controller
         // Explicitly animate volume decrease
@@ -334,3 +339,12 @@ struct ContentView: View {
         }
     }
 }
+
+// Remove the SettingsView preview for now, as it relies on environment objects
+/*
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+}
+*/

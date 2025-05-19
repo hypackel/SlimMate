@@ -47,8 +47,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.center() // Center initially, positioning will be handled by WindowController
             window.orderOut(nil) // Hide initially
             
-            // Pass the created HUD window to the WindowController
+            // Pass the created HUD window directly to the WindowController owned by AppDelegate
             windowController.window = window
+            
+            // Enforce the initial hidden state - this should now work reliably
+            windowController.hideWindow() // Ensure it's hidden on launch
         }
 
         // Create the status item
@@ -61,7 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create and assign the menu
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(StatusBarController.openSettings), keyEquivalent: ","))
+        let settingsMenuItem = NSMenuItem(title: "Settings...", action: #selector(StatusBarController.openSettings), keyEquivalent: ",")
+        settingsMenuItem.target = StatusBarController.shared // Explicitly set the target
+        menu.addItem(settingsMenuItem)
         menu.addItem(NSMenuItem.separator()) // Add a separator
         menu.addItem(NSMenuItem(title: "Quit SlimMate", action: #selector(NSApplication.shared.terminate(_:)), keyEquivalent: "q"))
         
@@ -69,6 +74,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Set the shared instance for AppKit actions to call into SwiftUI context
         StatusBarController.shared.setAppObjects(volumeMonitor: volumeMonitor, windowController: windowController)
+        
+        // Ensure the HUD window is hidden on launch
+        hudWindow?.orderOut(nil)
     }
     
     // Optional: Implement this to clean up resources before the application terminates

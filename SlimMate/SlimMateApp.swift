@@ -2,7 +2,6 @@
 //  SlimMateApp.swift
 //  SlimMate
 //
-//  Created by Aarav Mehra on 7/20/24.
 //
 
 import SwiftUI
