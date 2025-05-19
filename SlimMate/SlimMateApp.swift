@@ -10,7 +10,7 @@ import AppKit
 // Create a global reference to the settings window controller
 // This is a simple way to manage the settings window lifecycle
 // In a more complex app, you might use a dedicated AppCoordinator or similar pattern.
-private var settingsWindowController: NSWindowController? = nil
+// private var settingsWindowController: NSWindowController? = nil // Removed: Will be managed by AppDelegate
 
 @main
 struct SlimMateApp: App {

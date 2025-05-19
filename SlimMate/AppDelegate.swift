@@ -1,5 +1,8 @@
 import Cocoa
 import SwiftUI
+import AppKit
+import Foundation // For getuid()
+// import SlimMate.Services // Import the Services module where VolumeMonitor and WindowController reside
 
 // Create a global reference to the settings window controller
 // This is a simple way to manage the settings window lifecycle
@@ -86,7 +89,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Clean up resources if necessary
         // You might want to re-enable the default HUD here if needed
-        // startDefaultHUD() // Implement a similar function to start it again
+        startDefaultHUD()
     }
     
     // Function to stop the default macOS volume HUD (OSDUIHelper)
@@ -117,7 +120,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // Optional: Function to re-enable the default macOS volume HUD (OSDUIHelper)
+    // Function to re-enable the default macOS volume HUD (OSDUIHelper)
     private func startDefaultHUD() {
          print("Attempting to re-enable default macOS HUD (OSDUIHelper)...")
          do {
