@@ -11,23 +11,21 @@ import AppKit // Import AppKit
 
 // Struct to wrap NSVisualEffectView for AppKit-based visual effects
 struct VisualEffectView: NSViewRepresentable {
-    @Environment(\.colorScheme) var colorScheme // Access SwiftUI environment color scheme
+    // Remove @Environment colorScheme from here as we'll try a different approach
     
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.material = .sidebar // Use a dark, translucent material
+        // Configure the visual effect view
+        view.material = .sidebar // Continue using a dark-appropriate material
         view.state = .active // Apply the effect actively
-        // The appearance will be set in updateNSView
+        view.blendingMode = .behindWindow // Important for layering within the window
+        view.isEmphasized = true // May help in ensuring a distinct appearance
+        // Do NOT set appearance explicitly here; rely on material + blendingMode + isEmphasized
         return view
     }
     
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        // Explicitly set the appearance based on the SwiftUI environment
-        if colorScheme == .dark {
-            nsView.appearance = NSAppearance(named: .vibrantDark) // Use dark vibrant appearance
-        } else {
-            nsView.appearance = NSAppearance(named: .vibrantLight) // Use light vibrant appearance
-        }
+        // No explicit appearance setting needed here with this approach
     }
 }
 
@@ -69,6 +67,12 @@ struct ContentView: View {
                 }
                 .transition(.opacity) // Apply transition to the ZStack
                 .foregroundStyle(.primary) // Explicitly set foreground style for the ZStack content
+                .onAppear { // Add onAppear to log color scheme
+                    print("HUD appeared. Detected color scheme: \(colorScheme)")
+                }
+                .onChange(of: colorScheme) { oldScheme, newScheme in // Add onChange to log color scheme changes
+                    print("HUD color scheme changed from \(oldScheme) to \(newScheme)")
+                }
             }
         }
         // Remove the WindowAccessor background modifier
