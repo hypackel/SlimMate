@@ -1,5 +1,5 @@
 {
-  "originHash" : "471109b06104fa8765695d9f81edee1201e501e61e2a38facacc6a42a5674018",
+  "originHash" : "2bc84b907ba35ce3d08f112e441055c1db79d5658cd19dcb7d9730e863498516",
   "pins" : [
     {
       "identity" : "issoundadditions",
@@ -8,6 +8,15 @@
       "state" : {
         "branch" : "master",
         "revision" : "4b555f0354e6c280917bae8a598a258efe87ab98"
+      }
+    },
+    {
+      "identity" : "mediakeytap",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/nhurden/MediaKeyTap",
+      "state" : {
+        "revision" : "7d1b8169d228ef6e5ec7db676a348f2f3e50c734",
+        "version" : "2.3.0"
       }
     }
   ],

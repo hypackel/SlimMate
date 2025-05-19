@@ -77,12 +77,62 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Ensure the HUD window is hidden on launch
         hudWindow?.orderOut(nil)
+        
+        // Attempt to stop the default macOS volume HUD
+        stopDefaultHUD()
     }
     
     // Optional: Implement this to clean up resources before the application terminates
     func applicationWillTerminate(_ notification: Notification) {
         // Clean up resources if necessary
+        // You might want to re-enable the default HUD here if needed
+        // startDefaultHUD() // Implement a similar function to start it again
     }
+    
+    // Function to stop the default macOS volume HUD (OSDUIHelper)
+    private func stopDefaultHUD() {
+        print("Attempting to stop default macOS HUD (OSDUIHelper)...")
+        do {
+            let kickstartTask = Process()
+            kickstartTask.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+            // Kickstart the OSDUIHelper in the current user's GUI session
+            // Using getuid() to find the correct session for the current user
+            kickstartTask.arguments = ["kickstart", "gui/\(getuid())/com.apple.OSDUIHelper"]
+            try kickstartTask.run()
+            kickstartTask.waitUntilExit()
+            
+            // Give it a moment to start before trying to stop it
+            usleep(500000) // Sleep for 0.5 seconds
+            
+            let stopTask = Process()
+            stopTask.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            // Send SIGSTOP signal to pause the process
+            stopTask.arguments = ["-STOP", "OSDUIHelper"]
+            try stopTask.run()
+            stopTask.waitUntilExit()
+            print("Default macOS HUD (OSDUIHelper) should now be stopped.")
+        } catch {
+            NSLog("Error trying to stop OSDUIHelper: \(error)")
+            print("Failed to stop default macOS HUD. Error: \(error)")
+        }
+    }
+    
+    // Optional: Function to re-enable the default macOS volume HUD (OSDUIHelper)
+    private func startDefaultHUD() {
+         print("Attempting to re-enable default macOS HUD (OSDUIHelper)...")
+         do {
+             let killTask = Process()
+             killTask.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+             // Send SIGKILL signal to terminate the paused process, which should allow it to restart normally
+             killTask.arguments = ["-9", "OSDUIHelper"]
+             try killTask.run()
+             killTask.waitUntilExit()
+              print("Default macOS HUD (OSDUIHelper) should now be re-enabled.")
+         } catch {
+             NSLog("Error trying to re-enable OSDUIHelper: \(error)")
+             print("Failed to re-enable default macOS HUD. Error: \(error)")
+         }
+     }
 }
 
 // Helper class to bridge AppKit actions to SwiftUI StateObjects/ObservableObjects
