@@ -14,6 +14,9 @@ class WindowController: ObservableObject {
                 window.isOpaque = false // Make it transparent
                 window.backgroundColor = .clear // Clear background
                 
+                // Force dark appearance for the window
+                window.appearance = NSAppearance(named: .darkAqua)
+                
                 // Ensure the window\'s content view is set if it wasn\'t already
                 // This might be redundant if NSHostingController sets it, but as a safeguard:
                 // if window.contentViewController == nil {

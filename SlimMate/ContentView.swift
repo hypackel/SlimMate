@@ -16,7 +16,7 @@ struct VisualEffectView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         // Configure the visual effect view
-        view.material = .sidebar // Continue using a dark-appropriate material
+        view.material = .hudWindow // Use .hudWindow material for a HUD-specific dark blur
         view.state = .active // Apply the effect actively
         view.blendingMode = .behindWindow // Important for layering within the window
         view.isEmphasized = true // May help in ensuring a distinct appearance
@@ -53,6 +53,11 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .background(VisualEffectView()) // Use NSVisualEffectView for background
                         .frame(width: 220, height: 50) // Apply frame to the background shape
+                    
+                    // Add a semi-transparent black overlay to force dark appearance
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.black.opacity(0.5)) // Adjust opacity for darker and more translucent effect
+                        .frame(width: 220, height: 50) // Apply frame to the overlay
                     
                     HStack(spacing: 8) {
                         Image(systemName: volumeMonitor.volumeLevel == 0 ? "speaker.slash.fill" : "speaker.wave.2.fill")

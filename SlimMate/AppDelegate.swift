@@ -36,7 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         hudWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 250, height: 80), // Match ContentView HUD size
-            styleMask: [.borderless], // Borderless style
+            styleMask: [.hudWindow, .nonactivatingPanel, .borderless], // Set styleMask for HUD
             backing: .buffered,
             defer: false
         )
