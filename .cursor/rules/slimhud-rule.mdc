@@ -1,6 +1,13 @@
 ---
-description: When you would like to know how to implenent something already done by SlimHUD
+description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-you can search for files in ../slimhud and look through those to make other things
+[rule: slimhud-competitor-reference]
+when I ask about how SlimHUD does something,
+  search the codebase in ./SlimHUDNotPartOfApp
+  and use that to inform the answer.
+
+SlimHUD is a competitor project located in the ./SlimHUDNotPartOfApp directory.
+It is not part of the main application but has implemented many similar features.
+Use SlimHUD as a reference point only when explicitly mentioned.
