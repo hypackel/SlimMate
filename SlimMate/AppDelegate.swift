@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 import Foundation // For getuid()
 // import SlimMate.Services // Import the Services module where VolumeMonitor and WindowController reside
+import MediaKeyTap // Import MediaKeyTap
 
 // Create a global reference to the settings window controller
 // This is a simple way to manage the settings window lifecycle
@@ -13,6 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Keep VolumeMonitor and WindowController instances
     var volumeMonitor: VolumeMonitor! // Initialized in applicationDidFinishLaunching
     var windowController: WindowController! // Initialized in applicationDidFinishLaunching
+    var brightnessMonitor: BrightnessMonitor! // Add BrightnessMonitor instance
+    private var mediaKeyObserver: MediaKeyObserver! // Add MediaKeyObserver instance
     
     // Keep a reference to the status item
     private var statusItem: NSStatusItem?
@@ -24,14 +27,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Ensure the application is activated to receive key presses and menubar interactions
         NSApplication.shared.activate(ignoringOtherApps: true)
         
-        // Initialize VolumeMonitor and WindowController
+        // Initialize Monitors and Controller
         volumeMonitor = VolumeMonitor() // Initialize VolumeMonitor
+        brightnessMonitor = BrightnessMonitor() // Initialize BrightnessMonitor
         windowController = WindowController() // Initialize WindowController
+        
+        // Initialize MediaKeyObserver with monitors
+        mediaKeyObserver = MediaKeyObserver(volumeMonitor: volumeMonitor, brightnessMonitor: brightnessMonitor) // Initialize MediaKeyObserver
 
         // Create and configure the HUD window
         let contentView = ContentView()
             .environmentObject(volumeMonitor) // Provide VolumeMonitor to ContentView
             .environmentObject(windowController) // Provide WindowController to ContentView
+            .environmentObject(brightnessMonitor) // Provide BrightnessMonitor to ContentView
         let hostingController = NSHostingController(rootView: contentView)
         
         hudWindow = NSWindow(

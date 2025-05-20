@@ -7,11 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D0599E42DDD324300604D3D /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D0599E32DDD324300604D3D /* IOKit.framework */; };
+		0D0599E62DDD324A00604D3D /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D0599E52DDD324A00604D3D /* ApplicationServices.framework */; };
+		0D0599E82DDD35B100604D3D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D0599E72DDD35B100604D3D /* CoreGraphics.framework */; };
 		0DCB2E5C2DDAA09200DDE4AD /* ISSoundAdditions in Frameworks */ = {isa = PBXBuildFile; productRef = 0DCB2E5B2DDAA09200DDE4AD /* ISSoundAdditions */; };
 		0DCB2E7F2DDAD87100DDE4AD /* MediaKeyTap in Frameworks */ = {isa = PBXBuildFile; productRef = 0DCB2E7E2DDAD87100DDE4AD /* MediaKeyTap */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0D0599E32DDD324300604D3D /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		0D0599E52DDD324A00604D3D /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
+		0D0599E72DDD35B100604D3D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		0DCB2E4B2DDA8AF500DDE4AD /* SlimMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlimMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -28,6 +34,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0D0599E82DDD35B100604D3D /* CoreGraphics.framework in Frameworks */,
+				0D0599E62DDD324A00604D3D /* ApplicationServices.framework in Frameworks */,
+				0D0599E42DDD324300604D3D /* IOKit.framework in Frameworks */,
 				0DCB2E5C2DDAA09200DDE4AD /* ISSoundAdditions in Frameworks */,
 				0DCB2E7F2DDAD87100DDE4AD /* MediaKeyTap in Frameworks */,
 			);
@@ -36,10 +45,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0D0599E22DDD324300604D3D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0D0599E72DDD35B100604D3D /* CoreGraphics.framework */,
+				0D0599E52DDD324A00604D3D /* ApplicationServices.framework */,
+				0D0599E32DDD324300604D3D /* IOKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		0DCB2E422DDA8AF500DDE4AD = {
 			isa = PBXGroup;
 			children = (
 				0DCB2E4D2DDA8AF500DDE4AD /* SlimMate */,
+				0D0599E22DDD324300604D3D /* Frameworks */,
 				0DCB2E4C2DDA8AF500DDE4AD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -262,6 +282,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_ARC_EXCEPTIONS = YES;
+				CLANG_LINK_OBJC_RUNTIME = YES;
 				CODE_SIGN_ENTITLEMENTS = SlimMate/SlimMate.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -279,6 +301,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SlimMate/SlimMate-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -288,6 +311,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_ARC_EXCEPTIONS = YES;
+				CLANG_LINK_OBJC_RUNTIME = YES;
 				CODE_SIGN_ENTITLEMENTS = SlimMate/SlimMate.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -305,6 +330,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SlimMate/SlimMate-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

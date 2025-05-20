@@ -1,3 +1,10 @@
+//
+//  VolumeMonitor.swift
+//  SlimMate
+//
+//  Created by Gemini on going to add volume observation.
+//
+
 import SwiftUI
 import CoreAudio // Import CoreAudio framework
 import Foundation // Import Foundation for Timer
@@ -31,7 +38,7 @@ class VolumeMonitor: ObservableObject {
         var propertyAddress = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMaster
+            mElement: kAudioObjectPropertyElementMain
         )
 
         // Get the default output device ID
@@ -127,18 +134,15 @@ class VolumeMonitor: ObservableObject {
             let timeInterval: TimeInterval
             let volumeDifference = newVolume - self.volumeLevel
             let volumeStep: Float
-            let totalSteps: Int
 
             if newVolume > self.volumeLevel {
                 // Volume is increasing, use faster interpolation parameters
                 timeInterval = increaseInterpolationDuration / Double(increaseInterpolationSteps)
                 volumeStep = volumeDifference / Float(increaseInterpolationSteps)
-                totalSteps = increaseInterpolationSteps
             } else {
                 // Volume is decreasing, use regular interpolation parameters
                 timeInterval = interpolationDuration / Double(interpolationSteps)
                 volumeStep = volumeDifference / Float(interpolationSteps)
-                totalSteps = interpolationSteps
             }
             
             // If the difference is very small, just set the value directly to avoid unnecessary timer
@@ -173,6 +177,53 @@ class VolumeMonitor: ObservableObject {
         }
     }
 
+    // Function to programmatically set volume
+    func setVolume(level: Float) {
+        let clampedLevel = max(0.0, min(1.0, level)) // Clamp level between 0.0 and 1.0
+        print("Attempting to set volume to: \(clampedLevel)")
+
+        var volume = Float32(clampedLevel)
+        var volumeAddr = self.volumePropertyAddress // Create a mutable copy
+
+        let status = AudioObjectSetPropertyData(
+            self.audioDeviceID,
+            &volumeAddr, // Use the mutable copy
+            0,
+            nil,
+            UInt32(MemoryLayout<Float32>.size),
+            &volume
+        )
+
+        if status != noErr {
+            print("Error setting volume: \(status)")
+        } else {
+             // Update the published property immediately after successful set
+             DispatchQueue.main.async {
+                  self.handleVolumeUpdate(newVolume: clampedLevel) // Use the handling logic to update with potential interpolation
+             }
+        }
+    }
+    
+    // Basic functions to increase and decrease volume
+    func increaseVolume() {
+        setVolume(level: volumeLevel + 0.1)
+    }
+
+    func decreaseVolume() {
+        setVolume(level: volumeLevel - 0.1)
+    }
+    
+    // Function to toggle mute (basic implementation)
+    func toggleMute() {
+        // This is a simplified toggle. A full implementation would need to read the mute state.
+        if volumeLevel > 0 {
+            setVolume(level: 0.0)
+        } else {
+            // Set to a default level, e.g., 50%, or the last non-zero level
+            setVolume(level: 0.5)
+        }
+    }
+
     deinit {
         // Remove the listener when the object is deallocated
         if let listener = volumeChangeListener, audioDeviceID != kAudioObjectUnknown {
@@ -187,4 +238,4 @@ class VolumeMonitor: ObservableObject {
         // Invalidate the timer on deinit
         interpolationTimer?.invalidate()
     }
-} 
+}
