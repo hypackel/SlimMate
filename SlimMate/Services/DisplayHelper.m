@@ -7,24 +7,44 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import <CoreGraphics/CGEvent.h>
+#import <IOKit/IOKitLib.h>
+#import <IOKit/graphics/IOGraphicsLib.h>
 
 @implementation DisplayHelper
 
 + (float)getDisplayBrightness {
-    // For now, return a default value since we can't reliably get brightness without private APIs
-    return 0.5;
+    float brightness = 0.0;
+    io_iterator_t iterator;
+    kern_return_t result = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator);
+    
+    if (result == kIOReturnSuccess) {
+        io_object_t service;
+        while ((service = IOIteratorNext(iterator))) {
+            IODisplayGetFloatParameter(service, kNilOptions, CFSTR(kIODisplayBrightnessKey), &brightness);
+            IOObjectRelease(service);
+            break;
+        }
+        IOObjectRelease(iterator);
+    }
+    
+    NSLog(@"Current brightness: %f", brightness);
+    return brightness;
 }
 
 + (void)setDisplayBrightness:(float)brightness {
-    // Simulate brightness change using key events instead of direct API calls
-    float currentBrightness = [self getDisplayBrightness];
-    float targetBrightness = fmax(0.0, fmin(1.0, brightness));
+    io_iterator_t iterator;
+    kern_return_t result = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator);
     
-    if (targetBrightness > currentBrightness) {
-        [self simulateBrightnessUpKey];
-    } else if (targetBrightness < currentBrightness) {
-        [self simulateBrightnessDownKey];
+    if (result == kIOReturnSuccess) {
+        io_object_t service;
+        while ((service = IOIteratorNext(iterator))) {
+            IODisplaySetFloatParameter(service, kNilOptions, CFSTR(kIODisplayBrightnessKey), brightness);
+            IOObjectRelease(service);
+            break;
+        }
+        IOObjectRelease(iterator);
     }
+    NSLog(@"Set brightness to: %f", brightness);
 }
 
 + (void)simulateBrightnessKey:(int)key {
