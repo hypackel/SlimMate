@@ -50,10 +50,12 @@ class MediaKeyObserver: NSObject, MediaKeyTapDelegate {
     private func setupGlobalEventMonitor() {
         // Monitor for system-defined events (includes brightness keys)
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .systemDefined) { [weak self] event in
+            print("Global systemDefined event received")
             guard let self = self else { return }
             
             // Check if it's a brightness key event
             if event.type == .systemDefined {
+                print("Event type is systemDefined")
                 let data1 = event.data1
                 
                 // Extract key code and key state
@@ -61,22 +63,32 @@ class MediaKeyObserver: NSObject, MediaKeyTapDelegate {
                 let keyState = Int((data1 & 0x0000FF00) >> 8)
                 let keyRepeat = (data1 & 0x1) == 1
                 
+                print("Detected keyCode: \(keyCode), keyState: \(keyState), keyRepeat: \(keyRepeat)")
+                
                 // Handle brightness keys
                 switch keyCode {
                 case self.NX_KEYTYPE_BRIGHTNESS_UP:
+                    print("Identified Brightness Up key code")
                     if keyState == self.NX_KEYSTATE_DOWN && !keyRepeat {
-                        print("Brightness Up key pressed")
+                        print("Brightness Up key pressed - conditions met")
                         self.brightnessMonitor.increaseBrightness()
                     }
                 case self.NX_KEYTYPE_BRIGHTNESS_DOWN:
+                    print("Identified Brightness Down key code")
                     if keyState == self.NX_KEYSTATE_DOWN && !keyRepeat {
-                        print("Brightness Down key pressed")
+                        print("Brightness Down key pressed - conditions met")
                         self.brightnessMonitor.decreaseBrightness()
                     }
                 default:
                     break
                 }
             }
+        }
+        
+        if eventMonitor == nil {
+            print("Failed to create global event monitor.")
+        } else {
+            print("Global event monitor created successfully.")
         }
     }
 

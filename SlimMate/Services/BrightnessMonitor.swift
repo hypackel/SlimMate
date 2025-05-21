@@ -3,15 +3,30 @@ import Combine
 
 class BrightnessMonitor: ObservableObject {
     @Published var brightnessLevel: Float = 0.5 // Default brightness
+    private var monitorTimer: Timer?
 
     init() {
         // Get initial brightness from DisplayHelper
         getInitialBrightness()
+        
+        // Start monitoring brightness every second
+        monitorTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            let brightness = DisplayHelper.getDisplayBrightness()
+            print("Monitored brightness: \(brightness)")
+            DispatchQueue.main.async {
+                self?.brightnessLevel = brightness
+            }
+        }
+    }
+
+    deinit {
+        monitorTimer?.invalidate()
     }
 
     // Function to get the current brightness using DisplayHelper
     private func getInitialBrightness() {
         let currentBrightness = DisplayHelper.getDisplayBrightness()
+        print("Initial brightness: \(currentBrightness)")
         DispatchQueue.main.async {
             self.brightnessLevel = currentBrightness
         }
